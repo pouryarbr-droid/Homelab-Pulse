@@ -1454,6 +1454,32 @@
     for (var i=0;i<9;i++){ var s = document.createElement('div'); s.className = 'skeleton'; els.tiles.appendChild(s); }
   }
 
+
+  // Numbers that arrive as text (pasted "1,200", Persian digits, "-", an error like #N/A) must not poison the sums:
+  // convert them here once, count what could not be read, and mention it in the status line.
+  var TEXT_FIELDS_ = { date:1, source:1, medium:1, channelType:1, campaign:1, landingPage:1, copy:1, brand:1 };
+  var coercedBad = 0;
+  function toNum(v){
+    if (typeof v === 'number') return isFinite(v) ? v : (coercedBad++, 0);
+    if (v === '' || v === null || v === undefined || v === false) return 0;
+    if (v === true) return 1;
+    var s = String(v).trim();
+    if (!s || s === '-' || s === '\u2014') return 0;
+    s = s.replace(/[\u06F0-\u06F9]/g, function(d){ return String(d.charCodeAt(0) - 0x06F0); })
+         .replace(/[\u0660-\u0669]/g, function(d){ return String(d.charCodeAt(0) - 0x0660); })
+         .replace(/[,\u066C\u066B\s]/g, '');
+    var n = parseFloat(s);
+    if (isFinite(n) && /^[-+]?\d*\.?\d+(e[-+]?\d+)?%?$/i.test(s)) return /%$/.test(s) ? n / 100 : n;
+    coercedBad++; return 0;
+  }
+  function sanitizeNumbers(raw, targets){
+    coercedBad = 0;
+    var textIdx = {}; raw.fields.forEach(function(f,i){ if (TEXT_FIELDS_[f]) textIdx[i] = true; });
+    raw.rows.forEach(function(row){ for (var j = 0; j < row.length; j++) if (!textIdx[j]) row[j] = toNum(row[j]); });
+    if (targets) targets.rows.forEach(function(row){ for (var j = 2; j < row.length; j++) row[j] = toNum(row[j]); });
+    return coercedBad;
+  }
+
   function ingest(payload){
     RAW = payload.raw || { fields: [], rows: [] };
     FIELD_IDX = {};
@@ -1469,6 +1495,7 @@
     TARGETS = payload.targets || { fields: [], rows: [] };
     TARGET_IDX = {};
     TARGETS.fields.forEach(function(f,i){ TARGET_IDX[f] = i; });
+    var badCells = sanitizeNumbers(RAW, TARGETS);
     TARGETS_BY_KEY = {};
     TARGETS.rows.forEach(function(row){
       var key = row[TARGET_IDX.year] + '|' + row[TARGET_IDX.month];
@@ -1494,7 +1521,7 @@
         ingest(data);
         showOnly('content');
         positionTabIndicator(false);
-        setStatus('live', (RAW.rows.length) + ' rows loaded' + (TARGET_IDX.costPremium === undefined ? ' · ⚠ old Apps Script: budget by type is not being served — redeploy Code.gs' : ''));
+        setStatus('live', (RAW.rows.length) + ' rows loaded' + (coercedBad ? ' \u00b7 \u26a0 ' + coercedBad + ' cell(s) in number columns were not numbers and were read as 0 \u2014 check the Data tab' : '') + (TARGET_IDX.costPremium === undefined ? ' · ⚠ old Apps Script: budget by type is not being served — redeploy Code.gs' : ''));
         var t = data.generatedAt ? new Date(data.generatedAt) : new Date();
         els.footerTime.textContent = t.toLocaleString();
       })
