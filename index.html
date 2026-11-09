@@ -463,7 +463,7 @@
   var TYPED_METRICS = ['leads','inzone','mql','orders','cost','upsell'];
   var METRIC_LABELS = { cost:'Cost (IRR)', impressions:'Impressions', clicks:'Clicks', sessions:'Sessions',
     leads:'Leads', inzone:'Inzone', mql:'Total MQL', mqlDirect:'Direct MQL', orders:'Orders', sms:'SMS Sent', upsell:'Upsell',
-    cpl:'CPL', cpo:'CPO', cpmql:'CPMQL' };
+    cpl:'CPL', cpo:'CPO', cpmql:'CPMQL', cptmql:'Cost per Total MQL' };
 
   var els = {};
   ['status-dot','status-text','settings-panel','endpoint-input','empty-state','error-state','error-detail',
@@ -653,7 +653,7 @@
     return { target: targetForDateRange(metricKey, range.from, range.to) };
   }
 
-  var LOWER_BETTER = { cost:1, cpl:1, cpmql:1, cpo:1 };
+  var LOWER_BETTER = { cost:1, cpl:1, cpmql:1, cptmql:1, cpo:1 };
 
   function statChip(label, ratio, lowerBetter){
     if (ratio === null || !isFinite(ratio)) return '<span class="stat-chip neutral">'+label+' —</span>';
@@ -979,7 +979,7 @@
     els.channelTypeSelect.value = current;
 
     if (!els.trendMetricSelect.options.length){
-      ['leads','inzone','mqlDirect','mql','orders','cost','upsell','sessions','impressions','clicks','cpl','cpo','cpmql'].forEach(function(m){
+      ['leads','inzone','mqlDirect','mql','orders','cost','upsell','sessions','impressions','clicks','cpl','cpo','cpmql','cptmql'].forEach(function(m){
         var o = document.createElement('option'); o.value = m; o.textContent = METRIC_LABELS[m];
         els.trendMetricSelect.appendChild(o);
       });
@@ -1016,6 +1016,7 @@
     t.cpo = t.orders ? t.cost/t.orders : 0;
     var cpmqlDen = typeFilter === 'Communication' ? t.mql : t.mqlDirect;
     t.cpmql = cpmqlDen ? t.cost/cpmqlDen : 0;
+    t.cptmql = t.mql ? t.cost/t.mql : 0;   // Cost per TOTAL MQL (direct + indirect + communication)
     return t;
   }
 
@@ -1033,7 +1034,7 @@
 
   function renderTiles(rows){
     var t = computeTotals(rows);
-    var order = ['cost','impressions','clicks','sessions','leads','inzone','mqlDirect','mqlIndirect','mqlComm','mql','commMqlPremium','commMqlFree','commMqlPrescription','orders','upsell','sms','cpl','cpo','cpmql'];
+    var order = ['cost','impressions','clicks','sessions','leads','inzone','mqlDirect','mqlIndirect','mqlComm','mql','commMqlPremium','commMqlFree','commMqlPrescription','orders','upsell','sms','cpl','cpo','cpmql','cptmql'];
     els.tiles.innerHTML = '';
     order.forEach(function(k){
       var actual = t[k];
@@ -1041,7 +1042,7 @@
       if (isCommType && typeFilter !== 'Communication') return; // only the Communication view has these three cards
       if (!actual && !isCommType && k !== 'orders') return; // hide tiles with no data for the current filter — except Orders, which every Type filter always shows
       if (k === 'mqlComm' && typeFilter) return; // Communication has its own view; the type views exclude it
-      var isDerived = (k==='cpl'||k==='cpo'||k==='cpmql');
+      var isDerived = (k==='cpl'||k==='cpo'||k==='cpmql'||k==='cptmql');
       var tile = document.createElement('div');
       tile.className = 'tile' + (isDerived ? ' derived' : '');
       var html = '<div class="label">'+tileLabel(k)+'</div>'+
@@ -1106,7 +1107,7 @@
   function renderTrend(rows){
     var range = dateRangeFor(dateFilter);
     if (!range) return;
-    var isRatioMetric = trendMetric==='cpl'||trendMetric==='cpo'||trendMetric==='cpmql';
+    var isRatioMetric = trendMetric==='cpl'||trendMetric==='cpo'||trendMetric==='cpmql'||trendMetric==='cptmql';
     var buckets = {}, order = [];
     var cur = range.from;
     while (cur <= range.to){
@@ -1121,7 +1122,7 @@
       if (!bucket) return; // outside the selected range
       if (isRatioMetric){
         bucket.cost += metricValue(row,'cost');
-        var denom = trendMetric==='cpl' ? 'leads' : (trendMetric==='cpo' ? 'orders' : cpmqlDenomKey());
+        var denom = trendMetric==='cpl' ? 'leads' : (trendMetric==='cpo' ? 'orders' : (trendMetric==='cptmql' ? 'mql' : cpmqlDenomKey()));
         bucket.count += metricValue(row,denom);
       } else if (['impressions','clicks','sessions'].indexOf(trendMetric) !== -1){
         bucket.value += field(row,trendMetric)||0;
@@ -1383,7 +1384,8 @@
       { key:'commPrescription', label:'Prescription MQL', value: isComm ? t.commMqlPrescription : 0, targetKey:null },
       { key:'orders', label:'Orders', value: t.orders, targetKey:'orders' },
       { key:'cost', label:'Cost (IRR)', value: t.cost, targetKey:'cost' },
-      { key:'cpmql', label:'CPMQL', value: cpmql, targetKey:'cpmql', actualOverride: cpmql }
+      { key:'cpmql', label:'CPMQL', value: cpmql, targetKey:'cpmql', actualOverride: cpmql },
+      { key:'cptmql', label:'Cost per Total MQL', value: mqlSplit.total ? t.cost / mqlSplit.total : 0, targetKey:null }
     ];
 
     els.briefTiles.innerHTML = '';
@@ -1391,7 +1393,7 @@
       if (!spec.value) return; // hide tiles with no data for the current filter
       var tile = document.createElement('div');
       tile.className = 'tile';
-      var isRatio = spec.key === 'cpmql';
+      var isRatio = spec.key === 'cpmql' || spec.key === 'cptmql';
       var html = '<div class="label">'+spec.label+'</div>'+
         '<div class="value tabular"></div>';
       if (spec.targetKey){
