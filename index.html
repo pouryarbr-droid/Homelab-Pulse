@@ -297,12 +297,12 @@
               <th>#</th>
               <th class="sortable" data-sort="name">Group</th>
               <th class="num sortable" data-sort="leads">Leads</th>
-              <th class="num sortable" data-sort="mql">MQL</th>
+              <th class="num sortable" data-sort="mqlCol" id="bd-th-mql">Direct MQL</th>
               <th class="num sortable" data-sort="orders">Orders</th>
-              <th class="num sortable" data-sort="cost">Cost</th>
-              <th class="num sortable" data-sort="cpl">CPL</th>
-              <th class="num sortable" data-sort="cpmql">CPMQL</th>
-              <th class="num sortable" data-sort="cpo">CPO</th>
+              <th class="num sortable" data-sort="cost">Cost (IRR)</th>
+              <th class="num sortable" data-sort="cpl">Cost per Lead</th>
+              <th class="num sortable" data-sort="cpmql" id="bd-th-cpmql">Cost per Direct MQL</th>
+              <th class="num sortable" data-sort="cpo">Cost per Order</th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -456,7 +456,7 @@
   var forecastOn = false; // the "Forecast" checkbox on the trend chart
   var breakdownDim = 'channelType';
   var breakdownSort = { key: 'cpl', dir: 'asc' }; // default matches the table's old fixed "best CPL first" order
-  var BREAKDOWN_SORT_DEFAULT_DIR_ = { name:'asc', leads:'desc', mql:'desc', orders:'desc', cost:'desc', cpl:'asc', cpmql:'asc', cpo:'asc' };
+  var BREAKDOWN_SORT_DEFAULT_DIR_ = { name:'asc', leads:'desc', mql:'desc', mqlCol:'desc', orders:'desc', cost:'desc', cpl:'asc', cpmql:'asc', cpo:'asc' };
   var activeTab = 'overview';
   var charts = { trend: null, breakdown: null, lp: null, cp: null };
 
@@ -1235,6 +1235,7 @@
       var g = groups[k];
       g.name = k;
       g.cpl = g.leads ? g.cost/g.leads : 0;
+      g.mqlCol = typeFilter === 'Communication' ? g.mql : g.mqlDirect;   // Breakdown table: Direct MQL (Communication has no direct/indirect split)
       var cpmqlDen = typeFilter === 'Communication' ? g.mql : g.mqlDirect;
       g.cpmql = cpmqlDen ? g.cost/cpmqlDen : 0;
       g.cpo = g.orders ? g.cost/g.orders : 0;
@@ -1305,11 +1306,14 @@
       var tr = document.createElement('tr');
       if (!g.leads) tr.className = 'zero';
       tr.innerHTML = '<td class="rank">'+(i+1)+'</td><td>'+escapeHtml(g.name)+'</td>'+
-        '<td class="num">'+fmtNum(g.leads)+'</td><td class="num">'+fmtNum(g.mql)+'</td>'+
+        '<td class="num">'+fmtNum(g.leads)+'</td><td class="num">'+fmtNum(g.mqlCol)+'</td>'+
         '<td class="num">'+fmtNum(g.orders)+'</td><td class="num">'+fmtNum(g.cost)+'</td>'+
         '<td class="num">'+fmtRatio(g.cpl)+'</td><td class="num">'+fmtRatio(g.cpmql)+'</td><td class="num">'+fmtRatio(g.cpo)+'</td>';
       tbody.appendChild(tr);
     });
+    var isComm = typeFilter === 'Communication';
+    document.getElementById('bd-th-mql').textContent = isComm ? 'MQL' : 'Direct MQL';
+    document.getElementById('bd-th-cpmql').textContent = isComm ? 'Cost per MQL' : 'Cost per Direct MQL';
     updateBreakdownHeaderIndicators();
   }
 
