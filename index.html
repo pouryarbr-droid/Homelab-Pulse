@@ -285,6 +285,7 @@
           <h3>Breakdown</h3>
           <select id="breakdown-dim-select">
             <option value="channelType">Channel Type</option>
+            <option value="source">Source</option>
             <option value="sourceMedium">Source / Medium</option>
             <option value="campaign">Campaign</option>
             <option value="landingPage">Landing Page</option>
@@ -1204,7 +1205,7 @@
     });
   }
 
-  var DIM_LABEL = { channelType:'Channel Type', sourceMedium:'Source / Medium', campaign:'Campaign', landingPage:'Landing Page', copy:'Copy' };
+  var DIM_LABEL = { channelType:'Channel Type', source:'Source', sourceMedium:'Source / Medium', campaign:'Campaign', landingPage:'Landing Page', copy:'Copy' };
 
   function groupKey(row, dim){
     if (dim === 'sourceMedium'){
