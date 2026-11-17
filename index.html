@@ -1041,7 +1041,7 @@
       var actual = t[k];
       var isCommType = (k === 'commMqlPremium' || k === 'commMqlFree' || k === 'commMqlPrescription');
       if (isCommType && typeFilter !== 'Communication') return; // only the Communication view has these three cards
-      if (!actual && !isCommType && k !== 'orders') return; // hide tiles with no data for the current filter — except Orders, which every Type filter always shows
+      if (!actual && !isCommType && k !== 'orders' && k !== 'impressions' && k !== 'clicks') return; // hide tiles with no data for the current filter — except Orders, Impressions and Clicks, which are always shown
       if (k === 'mqlComm' && typeFilter) return; // Communication has its own view; the type views exclude it
       var isDerived = (k==='cpl'||k==='cpo'||k==='cpmql'||k==='cptmql');
       var tile = document.createElement('div');
