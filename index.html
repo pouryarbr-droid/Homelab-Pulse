@@ -297,6 +297,8 @@
             <thead><tr>
               <th>#</th>
               <th class="sortable" data-sort="name">Group</th>
+              <th class="num sortable" data-sort="impressions">Impressions</th>
+              <th class="num sortable" data-sort="clicks">Clicks</th>
               <th class="num sortable" data-sort="leads">Leads</th>
               <th class="num sortable" data-sort="mqlCol" id="bd-th-mql">Direct MQL</th>
               <th class="num sortable" data-sort="orders">Orders</th>
@@ -457,7 +459,7 @@
   var forecastOn = false; // the "Forecast" checkbox on the trend chart
   var breakdownDim = 'channelType';
   var breakdownSort = { key: 'cpl', dir: 'asc' }; // default matches the table's old fixed "best CPL first" order
-  var BREAKDOWN_SORT_DEFAULT_DIR_ = { name:'asc', leads:'desc', mql:'desc', mqlCol:'desc', orders:'desc', cost:'desc', cpl:'asc', cpmql:'asc', cpo:'asc' };
+  var BREAKDOWN_SORT_DEFAULT_DIR_ = { name:'asc', impressions:'desc', clicks:'desc', leads:'desc', mql:'desc', mqlCol:'desc', orders:'desc', cost:'desc', cpl:'asc', cpmql:'asc', cpo:'asc' };
   var activeTab = 'overview';
   var charts = { trend: null, breakdown: null, lp: null, cp: null };
 
@@ -1223,9 +1225,11 @@
     rows.forEach(function(row){
       var key = keyFn(row);
       if (key === null) return;
-      if (!groups[key]) groups[key] = { sessions:0, leads:0, mql:0, mqlDirect:0, orders:0, cost:0 };
+      if (!groups[key]) groups[key] = { sessions:0, impressions:0, clicks:0, leads:0, mql:0, mqlDirect:0, orders:0, cost:0 };
       var g = groups[key];
       if (opts.sessions) g.sessions += field(row,'sessions')||0;
+      g.impressions += metricValue(row,'impressions');
+      g.clicks += metricValue(row,'clicks');
       g.leads += metricValue(row,'leads');
       g.mql += metricValue(row,'mql');
       g.mqlDirect += metricValue(row,'mqlDirect');
@@ -1307,6 +1311,7 @@
       var tr = document.createElement('tr');
       if (!g.leads) tr.className = 'zero';
       tr.innerHTML = '<td class="rank">'+(i+1)+'</td><td>'+escapeHtml(g.name)+'</td>'+
+        '<td class="num">'+fmtNum(g.impressions)+'</td><td class="num">'+fmtNum(g.clicks)+'</td>'+
         '<td class="num">'+fmtNum(g.leads)+'</td><td class="num">'+fmtNum(g.mqlCol)+'</td>'+
         '<td class="num">'+fmtNum(g.orders)+'</td><td class="num">'+fmtNum(g.cost)+'</td>'+
         '<td class="num">'+fmtRatio(g.cpl)+'</td><td class="num">'+fmtRatio(g.cpmql)+'</td><td class="num">'+fmtRatio(g.cpo)+'</td>';
